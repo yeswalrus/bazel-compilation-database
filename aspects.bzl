@@ -54,6 +54,8 @@ _cc_rules = [
     "cc_test",
     "cc_inc_library",
     "cc_proto_library",
+    "_ap_binary",
+    "_ap_test",
 ]
 
 _objc_rules = [
@@ -283,6 +285,8 @@ def _compilation_database_aspect_impl(target, ctx):
         deps.extend(ctx.rule.attr.deps)
     if hasattr(ctx.rule.attr, "implementation_deps"):
         deps.extend(ctx.rule.attr.implementation_deps)
+    if hasattr(ctx.rule.attr,"srcs_dict"):
+        deps.extend(ctx.rule.attr.srcs_dict.keys())
 
     transitive_compilation_db = []
     all_compdb_files = []
@@ -356,9 +360,9 @@ def _compilation_database_aspect_impl(target, ctx):
     ]
 
 compilation_database_aspect = aspect(
-    # Also include srcs in the attribute aspects so people can use filegroup targets.
-    # See https://github.com/grailbio/bazel-compilation-database/issues/84.
-    attr_aspects = ["srcs", "deps"],
+    # Add support implementation deps (an experimental new feature we've been using for some time)
+    # as well as the srcs_dict field for install rules
+    attr_aspects = ["srcs", "deps", "implementation_deps", "srcs_dict"],
     attrs = {
         "_cc_toolchain": attr.label(
             default = Label("@bazel_tools//tools/cpp:current_cc_toolchain"),
