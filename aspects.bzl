@@ -281,6 +281,8 @@ def _compilation_database_aspect_impl(target, ctx):
         deps.extend(ctx.rule.attr.srcs)
     if hasattr(ctx.rule.attr, "deps"):
         deps.extend(ctx.rule.attr.deps)
+    if hasattr(ctx.rule.attr, "implementation_deps"):
+        deps.extend(ctx.rule.attr.implementation_deps)
 
     transitive_compilation_db = []
     all_compdb_files = []
