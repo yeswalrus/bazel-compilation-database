@@ -46,11 +46,12 @@ def _compilation_database_impl(ctx):
     content = content.replace("-isysroot __BAZEL_XCODE_SDKROOT__", "")
     ctx.actions.write(output = ctx.outputs.filename, content = content)
 
-    return [
-        OutputGroupInfo(
-            default = all_headers,
-        ),
-    ]
+    if ctx.attr.generate_header_output_group:
+        return [
+           OutputGroupInfo(
+               default = all_headers,
+           ),
+        ]
 
 _compilation_database = rule(
     attrs = {
@@ -78,6 +79,10 @@ _compilation_database = rule(
         "indent": attr.bool(
             default = False,
             doc = "Output indented json for legibility. Slightly slows database generation"
+        ),
+        "generate_header_output_group": attr.bool(
+            default = False,
+            doc = "Set an output group containing all headers. Will cause any rule required to generate a discovered header to run"
         ),
         "filename": attr.output(
             doc = "Name of the generated compilation database.",
