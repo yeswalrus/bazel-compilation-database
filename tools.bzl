@@ -12,22 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 def _bazel_output_base_util_impl(rctx):
-    if rctx.os.name.lower().startswith("windows") == True:
-        res = rctx.execute(["cmd", "/c", "echo", "%cd%"])
-    else:
-        res = rctx.execute(["pwd"])
-
-    if res.return_code != 0:
-        fail("getting output base failed (%d): %s" % (res.return_code, res.stderr))
-
-    # Strip last two path components.
-    if rctx.os.name.lower().startswith("windows") == True:
-        path_components = res.stdout.rstrip("\n").split("\\")[:-2]
-    else:
-        path_components = res.stdout.rstrip("\n").split("/")[:-2]
-
-    output_base = "/".join(path_components)
+    path  = rctx.path(rctx.attr._workspace).realpath.dirname
+    output_base = "{}".format(path)
 
     rctx.file("BUILD.bazel", "")
     rctx.file("defs.bzl", "OUTPUT_BASE = '%s'" % output_base)
@@ -35,6 +23,9 @@ def _bazel_output_base_util_impl(rctx):
 bazel_output_base_util = repository_rule(
     implementation = _bazel_output_base_util_impl,
     local = True,
+    attrs = {
+        "_workspace" : attr.label(default="@//:WORKSPACE")
+    }
 )
 
 def setup_tools():

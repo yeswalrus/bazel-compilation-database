@@ -32,7 +32,7 @@ def _compilation_database_impl(ctx):
 
     all_headers = depset(transitive = all_headers)
 
-    exec_root = ctx.attr.output_base + "/execroot/" + ctx.workspace_name
+    exec_root = ctx.attr.output_base
 
     content = compilation_db.to_list()
     if ctx.attr.unique:
