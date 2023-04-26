@@ -92,7 +92,18 @@ _compilation_database = rule(
 )
 
 def compilation_database(**kwargs):
+    name = kwargs.pop("name")
     _compilation_database(
         filename = kwargs.pop("filename", "compile_commands.json"),
+        name = "{}_compilation_database".format(name),
         **kwargs
     )
+
+    native.py_binary(
+        name = name,
+        main = "refresh.py",
+        srcs = [Label("//:refresh.py")],
+        data = [":compile_commands.json"],
+        testonly = True
+    )
+

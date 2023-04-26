@@ -80,12 +80,13 @@ def _is_objcpp_target(srcs):
 
 def _sources(ctx, target):
     srcs = []
+    hdrs = []
     if hasattr(ctx.rule.attr, "srcs"):
         srcs += [f for src in ctx.rule.attr.srcs for f in src.files.to_list()]
     if hasattr(ctx.rule.attr, "hdrs"):
-        srcs += [f for src in ctx.rule.attr.hdrs for f in src.files.to_list()]
+        hdrs += [f for src in ctx.rule.attr.hdrs for f in src.files.to_list()]
 
-    return srcs
+    return srcs, hdrs
 
 # Function copied from https://gist.github.com/oquenchil/7e2c2bd761aa1341b458cc25608da50c
 # TODO: Directly use create_compile_variables and get_memory_inefficient_command_line.
@@ -144,9 +145,10 @@ def _cc_compile_commands(ctx, target, feature_configuration, cc_toolchain):
     )
     compile_flags = _get_compile_flags(target)
 
-    srcs = _sources(ctx, target)
+    srcs, hdrs = _sources(ctx, target)
     if ctx.rule.kind == "cc_proto_library":
-        srcs += [f for f in target.files.to_list() if f.extension in ["h", "cc"]]
+        srcs += [f for f in target.files.to_list() if f.extension in ["cc"]]
+        hdrs += [f for f in target.files.to_list() if f.extension in ["h"]]
 
     # We currently recognize an entire target as C++ or C. This can probably be
     # made better for targets that have a mix of C and C++ files.
@@ -187,9 +189,20 @@ def _cc_compile_commands(ctx, target, feature_configuration, cc_toolchain):
 
     compile_commands = []
     for src in srcs:
+        path = src.short_path.replace("../", "external/") if src.is_source else src.path
+
         compile_commands.append(struct(
-            cmdline_list = tuple(cmdline_list + ["-c", src.path]),
+            cmdline_list = tuple(cmdline_list + ["-c", path]),
+            src_path = path,
             src = src,
+        ))
+    for hdr in hdrs:
+        path = hdr.short_path.replace("../", "external/") if hdr.is_source else hdr.path
+        
+        compile_commands.append(struct(
+            cmdline_list = tuple(cmdline_list + ["-x", "c++-header", "-c", path]),
+            src_path = path,
+            src = hdr,
         ))
     return compile_commands
 
@@ -263,8 +276,10 @@ def _objc_compile_commands(ctx, target, feature_configuration, cc_toolchain):
     compile_commands = []
     for src in srcs:
         arc_flag = None if src in non_arc_srcs else "-fobjc-arc"
+        path = src.short_path.replace("../", "external/")
         compile_commands.append(struct(
-            cmdline_list = tuple(cmdline_list + [arc_flag, "-c", src.path]),
+            cmdline_list = tuple(cmdline_list + [arc_flag, "-c", path]),
+            src_path = path,
             src = src,
         ))
     return compile_commands
@@ -327,7 +342,7 @@ def _compilation_database_aspect_impl(target, ctx):
     for compile_command in compile_commands:
         exec_root_marker = "__EXEC_ROOT__"
         compilation_db.append(
-            struct(arguments = compile_command.cmdline_list, directory = exec_root_marker, file = compile_command.src.path),
+            struct(arguments = compile_command.cmdline_list, directory = exec_root_marker, file = compile_command.src_path),
         )
         srcs.append(compile_command.src)
 
